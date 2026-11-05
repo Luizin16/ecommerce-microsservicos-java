@@ -1,0 +1,51 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pedidos
+    ports: ["3306:3306"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 5s
+      retries: 20
+
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports: ["5672:5672", "15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      retries: 20
+
+  pedido-service:
+    build: ./pedido-service
+    environment:
+      MYSQL_HOST: mysql
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports: ["8081:8081"]
+
+  notificacao-service:
+    build: ./notificacao-service
+    environment:
+      MONGO_HOST: mongo
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      mongo: { condition: service_started }
+      rabbitmq: { condition: service_healthy }
+    ports: ["8082:8082"]
+
+  api-gateway:
+    build: ./api-gateway
+    environment:
+      PEDIDO_HOST: pedido-service
+      NOTIFICACAO_HOST: notificacao-service
+    depends_on: [pedido-service, notificacao-service]
+    ports: ["8080:8080"]

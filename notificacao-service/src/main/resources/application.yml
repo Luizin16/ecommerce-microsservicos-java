@@ -1,0 +1,28 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: notificacao-service
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_HOST:localhost}:27017/notificacoes
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: guest
+    password: guest
+    listener:
+      simple:
+        # Em caso de erro, não recoloca na fila: a mensagem vai para a DLQ
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
